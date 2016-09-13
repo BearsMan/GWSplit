@@ -10,20 +10,20 @@ struct P023_ControlledCharacter {
 	DWORD flag;
 };
 
-struct P0229_InitMapLoad {
+struct P0406_InitMapLoad {
 	DWORD header;
-	DWORD id;
-	DWORD flag;
+	char pad[0x10];
+	DWORD mapid;
 };
 
 template <typename T>
 using StoChandler_t = bool(__fastcall*)(T* packet);
 
 StoChandler_t<P023_ControlledCharacter> g__P023_original;
-StoChandler_t<P0229_InitMapLoad>		g__P229_original;
+StoChandler_t<P0406_InitMapLoad>		g__P229_original;
 
 
-bool __fastcall gwsplit_InitMapLoad(P0229_InitMapLoad* packet)
+bool __fastcall gwsplit_InitMapLoad(P0406_InitMapLoad* packet)
 {
 	printf("mapload start event occured.\n");
 	livesplit.connect();
@@ -50,18 +50,18 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
-		AllocConsole();
-		freopen_s(&conhandle, "CONOUT$", "w", stdout);
-		g__P229_original = (StoChandler_t<P0229_InitMapLoad>		)DetourFunc((BYTE*)0x00889890, (BYTE*)gwsplit_InitMapLoad,			6);
+		//AllocConsole();
+		//freopen_s(&conhandle, "CONOUT$", "w", stdout);
+		g__P229_original = (StoChandler_t<P0406_InitMapLoad>		)DetourFunc((BYTE*)0x007FF500, (BYTE*)gwsplit_InitMapLoad,			5);
 		g__P023_original = (StoChandler_t<P023_ControlledCharacter>	)DetourFunc((BYTE*)0x005D3B73, (BYTE*)gwsplit_ControlledCharacter,	5);
 		break;
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
 		break;
 	case DLL_PROCESS_DETACH:
-		fclose(conhandle);
+		//fclose(conhandle);
 		//FreeConsole();
-		RetourFunc((BYTE*)0x00889890, (BYTE*)g__P229_original, 6);
+		RetourFunc((BYTE*)0x007FF500, (BYTE*)g__P229_original, 5);
 		RetourFunc((BYTE*)0x005D3B73, (BYTE*)g__P023_original, 5);
 		livesplit.disconnect();
 		break;
