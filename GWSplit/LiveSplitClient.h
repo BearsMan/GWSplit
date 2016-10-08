@@ -4,7 +4,7 @@
 
 
 
-class LiveSplitClient : public NamedPipeClient 
+class LiveSplitClient : public NamedPipeClient
 {
 public:
 	

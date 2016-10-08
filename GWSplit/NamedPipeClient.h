@@ -21,7 +21,7 @@ public:
 				pipename_,   // pipe name 
 				GENERIC_READ |  // read and write access 
 				GENERIC_WRITE,
-				0,              // no sharing 
+				FILE_SHARE_WRITE | FILE_SHARE_READ,
 				NULL,           // default security attributes
 				OPEN_EXISTING,  // opens existing pipe 
 				0,              // default attributes 
@@ -36,13 +36,13 @@ public:
 
 			if (GetLastError() != ERROR_PIPE_BUSY)
 			{
-				throw kPipeIsBusy;
+				return 1;
 			}
 
 			// All pipe instances are busy, so wait for 20 seconds. 
 
 			if (!WaitNamedPipeA(pipename_, 20000)) {
-				throw kPipeNotOpened;
+				return 1;
 			}
 
 
@@ -56,7 +56,7 @@ public:
 			NULL);    // don't set maximum time 
 		if (!success)
 		{
-			throw kStateNotChanged;
+			return kStateNotChanged;
 		}
 
 		return 0;

@@ -1,7 +1,7 @@
 #include "WinsockClient.h"
 #include "stdafx.h"
 
- WinsockClient::WinsockClient() {
+WinsockClient::WinsockClient() {
 	int result;
 
 	result = WSAStartup(MAKEWORD(2, 2), &wsadata_);
