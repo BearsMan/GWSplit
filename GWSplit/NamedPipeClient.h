@@ -14,6 +14,7 @@ class NamedPipeClient
 public:
 
 	int connect(LPCSTR pipename) {
+		attempts_ = 0;
 		strcpy_s(pipename_, pipename);
 		while (attempts_++ < 20)
 		{

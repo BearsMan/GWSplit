@@ -163,7 +163,7 @@ struct P023_ControlledCharacter {
 
 struct P0406_InitMapLoad {
 	__uint32 header;
-	__uint8 pad[0x10];
+	__uint8 pad[0x20];
 	__uint32 mapid;
 };
 
@@ -185,21 +185,22 @@ enum e_Op {
 std::queue<e_Op> g__commands;
 
 // https://wiki.guildwars.com/wiki/Guild_Wars_Wiki:Game_integration
-__uint32* mapidptr				= (__uint32*)0x00A31C50;
 gw_array<Agent*>* agentarrayptr = (gw_array<Agent*>*)0x00D55A20;
 
 
 
 bool inrun = false;
-__uint32 lastmapid = 0;
+bool split = false;
+bool ispaused = false;
+__uint32 mapid = 0, lastmapid;
 __uint32 state = 0;
 std::vector<bool(*)()> g__splits = {
-	[]()-> bool { return lastmapid == 214 && *mapidptr == 251; },
-	[]()-> bool { return lastmapid == 213 && *mapidptr == 250; },
-	[]()-> bool { return lastmapid == 219 && *mapidptr == 273; },
-	[]()-> bool { return lastmapid == 224 && *mapidptr == 279; },
-	[]()-> bool { return lastmapid == 204 && *mapidptr == 277; },
-	[]()-> bool { return lastmapid == 225 && *mapidptr == 226; },
+	[]()-> bool { return lastmapid == 214 && mapid == 251; },
+	[]()-> bool { return lastmapid == 213 && mapid == 250; },
+	[]()-> bool { return lastmapid == 219 && mapid == 273; },
+	[]()-> bool { return lastmapid == 224 && mapid == 279; },
+	[]()-> bool { return lastmapid == 204 && mapid == 277; },
+	[]()-> bool { return lastmapid == 225 && mapid == 226; },
 	[]()-> bool { 
 		auto& agents = *agentarrayptr;
 
@@ -218,7 +219,15 @@ DWORD WINAPI queueHandler(LPVOID arg) {
 	while (1) {
 		Sleep(1);
 
-		//__try {
+		__try {
+
+			if (!ispaused && split) {
+				livesplit.connect();
+				livesplit.split();
+				livesplit.disconnect();
+				split = false;
+				continue;
+			}
 
 			if (g__commands.empty()) continue;
 
@@ -233,11 +242,13 @@ DWORD WINAPI queueHandler(LPVOID arg) {
 			case kPause:
 				livesplit.pause();
 				printf("pause recieved\n");
+				ispaused = true;
 				break;
 
 			case kResume:
 				printf("resume recieved\n");
 				livesplit.resume();
+				ispaused = false;
 				break;
 
 			case kReset:
@@ -245,12 +256,8 @@ DWORD WINAPI queueHandler(LPVOID arg) {
 				livesplit.reset();
 				lastmapid = 0;
 				state = 0;
-				break;
-
-			case kSplit:
-				printf("split recieved\n");
-				livesplit.split();
-				state++;
+				split = false;
+				ispaused = false;
 				break;
 
 			case kStart:
@@ -258,12 +265,15 @@ DWORD WINAPI queueHandler(LPVOID arg) {
 				livesplit.start();
 				lastmapid = 0;
 				state = 0;
+				ispaused = false;
+				split = false;
 				break;
 			}
 
 			g__commands.pop();
 			livesplit.disconnect();
-		//} __except(EXCEPTION_EXECUTE_HANDLER){}
+
+		} __except(EXCEPTION_EXECUTE_HANDLER){}
 
 	}
 	return EXIT_SUCCESS;
@@ -279,7 +289,9 @@ DWORD WINAPI startHandler(LPVOID arg) {
 		while (*(void**)0xA2B2A0 != nullptr) {
 			Sleep(10);
 			if (g__splits[state]()) {
-				g__commands.push(kSplit);
+				state++;
+				printf("state %d reached, splitting\n", state);
+				split = true;
 			}
 		}
 		g__commands.push(kReset);
@@ -290,8 +302,9 @@ DWORD WINAPI startHandler(LPVOID arg) {
 
 bool __fastcall gwsplit_InitMapLoad(P0406_InitMapLoad* packet)
 {
-	printf("mapload start event occured.\n");
-	lastmapid = *mapidptr;
+	printf("mapload start event occured. mapid = %d\n",packet->mapid);
+	lastmapid = mapid;
+	mapid = packet->mapid;
 	g__commands.push(e_Op::kPause);
 	return g__P229_original(packet);
 }
